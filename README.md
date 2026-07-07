@@ -63,13 +63,38 @@ Edit `.env` with your Actual server details:
 | `RUN_ON_START` | no | Docker-only: also run once immediately when the container starts |
 | `DEBUG` | no | Set to `true` to log every scanned transaction's raw note, split/transfer status, and whether it matched — useful for figuring out why a transaction isn't being picked up |
 
-Add any tickers you hold to `tickers.json`:
+### Ticker mapping
+
+The ticker you write in a transaction's note (e.g. `WPEA`) doesn't have to be the exact symbol a
+price provider understands — `tickers.json` maps the short note ticker to whatever symbol Yahoo
+Finance actually needs to look it up:
 
 ```json
 {
   "WPEA": "WPEA.PA"
 }
 ```
+
+If a ticker has no entry in `tickers.json`, the script uses the note ticker as-is, which only
+works for symbols Yahoo already resolves without a suffix (mostly US-listed stocks, e.g. `AAPL`).
+
+**Finding the right symbol:** search for the ETF/stock on
+[finance.yahoo.com](https://finance.yahoo.com) — the symbol shown on its quote page (e.g.
+`WPEA.PA`, `AAPL`, `VWCE.DE`) is what belongs on the right-hand side of the mapping. Yahoo
+identifies non-US exchanges with a suffix on the ticker, not a prefix — some common ones:
+
+| Exchange | Suffix | Example |
+|---|---|---|
+| Euronext Paris | `.PA` | `WPEA.PA` |
+| Euronext Amsterdam | `.AS` | `VWRL.AS` |
+| Deutsche Börse Xetra | `.DE` | `VWCE.DE` |
+| London Stock Exchange | `.L` | `VWRL.L` |
+| Borsa Italiana (Milan) | `.MI` | `SWDA.MI` |
+| US exchanges (NYSE/Nasdaq) | none | `AAPL` |
+
+A common mistake is using Google Finance's `EXCHANGE:TICKER` syntax (e.g. `EPA:WAVE`) — Yahoo
+doesn't understand that format and the quote lookup will fail. Use the suffix form (`WAVE.PA`)
+instead.
 
 ### Crypto
 
