@@ -68,6 +68,23 @@ Add any tickers you hold to `tickers.json`:
 }
 ```
 
+### Crypto
+
+Crypto works the same way as ETFs — Yahoo Finance quotes crypto pairs like `BTC-USD` or `BTC-EUR`.
+Map your note ticker to the pair matching your account's currency:
+
+```json
+{
+  "WPEA": "WPEA.PA",
+  "BTC": "BTC-EUR",
+  "ETH": "ETH-EUR"
+}
+```
+
+A note like `0.05 BTC` works exactly like a stock/ETF holding note. As with ETFs, the script does no
+FX conversion, so pick the pair that matches your account's currency (`BTC-EUR` for a EUR account,
+`BTC-USD` for a USD account).
+
 ## Running locally
 
 ```bash
