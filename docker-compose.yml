@@ -4,4 +4,5 @@ services:
     env_file: .env
     volumes:
       - ./data:/data
+      - ./tickers.json:/app/tickers.json:ro
     restart: unless-stopped

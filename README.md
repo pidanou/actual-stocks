@@ -102,3 +102,7 @@ docker compose up -d --build
 
 Budget data is cached in `./data` (mounted into the container) so it doesn't need a full
 re-download on every run.
+
+`tickers.json` is also mounted (read-only) rather than baked into the image, so you can add new
+tickers by editing the file — no rebuild required, just wait for the next scheduled run (or restart
+the container to pick it up sooner).
