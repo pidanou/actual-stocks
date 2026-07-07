@@ -15,8 +15,10 @@ so the transaction (and the account balance) always reflects today's market valu
      If there's no mapping, the ticker is used as-is.
    - Fetches the current price from Yahoo Finance.
    - Updates the transaction's `amount` to `quantity x price` (in cents), preserving the original sign.
-4. Skips transactions that are part of an Actual **transfer** (have a `transfer_id`) and logs a
-   warning instead of touching them — see [Buying a holding](#buying-a-holding) below for why.
+4. Skips transactions that are part of an Actual **transfer** (have a `transfer_id`) or a **split**
+   (have subtransactions), logging a warning instead of touching them — see
+   [Buying a holding](#buying-a-holding) below for why transfers are skipped. Splits are skipped
+   because the note needs to live on a plain, non-split transaction to be revalued.
 
 ## Buying a holding
 
@@ -59,6 +61,7 @@ Edit `.env` with your Actual server details:
 | `TICKER_MAP_PATH` | no | Path to the ticker map file. Defaults to `tickers.json` |
 | `CRON_SCHEDULE` | no | Docker-only: cron expression for the daily run. Defaults to `0 18 * * *` |
 | `RUN_ON_START` | no | Docker-only: also run once immediately when the container starts |
+| `DEBUG` | no | Set to `true` to log every scanned transaction's raw note, split/transfer status, and whether it matched — useful for figuring out why a transaction isn't being picked up |
 
 Add any tickers you hold to `tickers.json`:
 

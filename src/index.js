@@ -16,6 +16,7 @@ const {
   ACTUAL_ACCOUNT_NAMES,
   ACTUAL_DATA_DIR = '/data',
   TICKER_MAP_PATH = path.join(__dirname, '..', 'tickers.json'),
+  DEBUG,
 } = process.env;
 
 // Matches notes like "5 WPEA" or "1.5 CW8"
@@ -112,14 +113,32 @@ async function main() {
 
     const accounts = await resolveAccounts();
     console.log(`Scanning accounts: ${accounts.map((a) => a.name).join(', ')}`);
-    const today = new Date().toISOString().slice(0, 10);
+    // Use a generous future end date rather than "today": computing "today" in
+    // UTC can exclude transactions dated today in timezones ahead of UTC, and
+    // this also picks up scheduled/future-dated transactions.
+    const farFuture = '2100-01-01';
 
     const holdings = [];
     for (const account of accounts) {
-      const transactions = await api.getTransactions(account.id, '1970-01-01', today);
+      const transactions = await api.getTransactions(account.id, '1970-01-01', farFuture);
       for (const tx of transactions) {
-        if (tx.is_parent || (tx.subtransactions && tx.subtransactions.length)) continue;
+        const isSplit = tx.is_parent || (tx.subtransactions && tx.subtransactions.length);
         const holding = parseHolding(tx.notes);
+        if (DEBUG) {
+          console.log(
+            `[debug] ${account.name} ${tx.date} id=${tx.id} notes=${JSON.stringify(tx.notes)} ` +
+              `is_parent=${!!tx.is_parent} split=${!!isSplit} transfer_id=${tx.transfer_id || null} matched=${!!holding}`,
+          );
+        }
+        if (isSplit) {
+          if (holding) {
+            console.warn(
+              `Skipping ${account.name} ${tx.date} "${tx.notes}" (id ${tx.id}): it's a split transaction, ` +
+                'the note must be on a plain (non-split) transaction to be revalued.',
+            );
+          }
+          continue;
+        }
         if (!holding) continue;
         if (tx.transfer_id) {
           // Transfers are a linked pair: editing this amount would also rewrite
