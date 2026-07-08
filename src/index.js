@@ -16,6 +16,7 @@ const {
   ACTUAL_ACCOUNT_NAMES,
   ACTUAL_DATA_DIR = '/data',
   TICKER_MAP_PATH = path.join(__dirname, '..', 'tickers.json'),
+  TARGET_CURRENCY,
   DEBUG,
 } = process.env;
 
@@ -80,14 +81,33 @@ async function resolveAccounts() {
   return [...resolved.values()];
 }
 
-async function fetchPrices(symbols) {
+async function fetchFxRate(fxRates, from, to) {
+  const pair = `${from}${to}=X`;
+  if (!(pair in fxRates)) {
+    const quote = await yahooFinance.quote(pair);
+    if (!quote || typeof quote.regularMarketPrice !== 'number') {
+      throw new Error(`No FX rate returned for ${pair}`);
+    }
+    fxRates[pair] = quote.regularMarketPrice;
+  }
+  return fxRates[pair];
+}
+
+async function fetchPrices(symbols, targetCurrency) {
   const prices = {};
+  const fxRates = {};
   for (const symbol of symbols) {
     const quote = await yahooFinance.quote(symbol);
     if (!quote || typeof quote.regularMarketPrice !== 'number') {
       throw new Error(`No price returned for ${symbol}`);
     }
-    prices[symbol] = { price: quote.regularMarketPrice, currency: quote.currency };
+    let price = quote.regularMarketPrice;
+    let fxRate = null;
+    if (targetCurrency && quote.currency && quote.currency !== targetCurrency) {
+      fxRate = await fetchFxRate(fxRates, quote.currency, targetCurrency);
+      price *= fxRate;
+    }
+    prices[symbol] = { price, currency: quote.currency, fxRate };
   }
   return prices;
 }
@@ -162,20 +182,21 @@ async function main() {
 
     const symbols = [...new Set(holdings.map((h) => h.symbol))];
     console.log(`Fetching prices for: ${symbols.join(', ')}`);
-    const prices = await fetchPrices(symbols);
+    const prices = await fetchPrices(symbols, TARGET_CURRENCY);
 
     let updated = 0;
     for (const { tx, account, quantity, ticker, symbol } of holdings) {
-      const { price } = prices[symbol];
+      const { price, currency, fxRate } = prices[symbol];
       const sign = tx.amount < 0 ? -1 : 1;
       const newAmount = sign * Math.round(quantity * price * 100);
       if (newAmount === tx.amount) continue;
       await api.updateTransaction(tx.id, { amount: newAmount });
       updated += 1;
+      const fxNote = fxRate ? ` [${currency}->${TARGET_CURRENCY} @ ${fxRate}]` : '';
       console.log(
-        `${account.name}  ${tx.date}  ${ticker} (${symbol}): ${quantity} x ${price} -> ${(newAmount / 100).toFixed(
-          2,
-        )} (was ${(tx.amount / 100).toFixed(2)})`,
+        `${account.name}  ${tx.date}  ${ticker} (${symbol}): ${quantity} x ${price}${fxNote} -> ${(
+          newAmount / 100
+        ).toFixed(2)} (was ${(tx.amount / 100).toFixed(2)})`,
       );
     }
 

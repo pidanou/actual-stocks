@@ -59,6 +59,7 @@ Edit `.env` with your Actual server details:
 | `ACTUAL_ACCOUNT_NAMES` | two | Comma-separated target account names. Merged with `ACTUAL_ACCOUNT_IDS` if both are set |
 | `ACTUAL_DATA_DIR` | no | Local budget cache dir. Defaults to `/data` (used by the Docker image) — set to e.g. `./data` when running outside Docker |
 | `TICKER_MAP_PATH` | no | Path to the ticker map file. Defaults to `tickers.json` |
+| `TARGET_CURRENCY` | no | Your budget's currency (e.g. `EUR`). If set, any quote in a different currency is converted using Yahoo Finance FX rates before being written |
 | `CRON_SCHEDULE` | no | Docker-only: cron expression for the daily run. Defaults to `0 18 * * *` |
 | `RUN_ON_START` | no | Docker-only: also run once immediately when the container starts |
 | `DEBUG` | no | Set to `true` to log every scanned transaction's raw note, split/transfer status, and whether it matched — useful for figuring out why a transaction isn't being picked up |
@@ -109,9 +110,25 @@ Map your note ticker to the pair matching your account's currency:
 }
 ```
 
-A note like `0.05 BTC` works exactly like a stock/ETF holding note. As with ETFs, the script does no
-FX conversion, so pick the pair that matches your account's currency (`BTC-EUR` for a EUR account,
-`BTC-USD` for a USD account).
+A note like `0.05 BTC` works exactly like a stock/ETF holding note. Prefer picking the pair that
+already matches your account's currency (`BTC-EUR` for a EUR account) — it avoids relying on an FX
+conversion for every single price update.
+
+### Currency conversion
+
+Every quote you fetch has to end up in your budget's single currency (Actual doesn't support
+per-account currencies), but not every ticker has a listing quoted in that currency — most US
+stocks (e.g. `AAPL`, `NVDA`) are only quoted in USD.
+
+Set `TARGET_CURRENCY` (e.g. `EUR`) and the script converts any quote not already in that currency,
+using Yahoo Finance's FX pairs (e.g. `USDEUR=X`) fetched at run time:
+
+```bash
+TARGET_CURRENCY=EUR
+```
+
+Without `TARGET_CURRENCY` set, prices are written in whatever currency the quote comes back in —
+fine if your budget's currency matches your holdings, misleading otherwise.
 
 ## Running locally
 
