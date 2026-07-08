@@ -151,3 +151,6 @@ re-download on every run.
 `tickers.json` is also mounted (read-only) rather than baked into the image, so you can add new
 tickers by editing the file — no rebuild required, just wait for the next scheduled run (or restart
 the container to pick it up sooner).
+
+## Related project
+https://github.com/jhonderson/actual-http-api/blob/main/examples/USAGE_EXAMPLES.md
